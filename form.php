@@ -1,75 +1,59 @@
-<!DOCTYPE html>
-<head>
-    <meta charset="utf-8" />
-    <title>backend3</title>
-    <link rel="stylesheet" href="style.css" type="text/css"/>
-</head>
-
-<body>
-  <div class="main">
-  <h1>Форма</h1>
-  <?php
-              if (!empty($messages)) {
-                print('<div id="messages">');
-                // Выводим все сообщения.
-                foreach ($messages as $message) {
-                  print($message);
-                }
-                print('</div>');
-              }
-
-              // Далее выводим форму отмечая элементы с ошибками классом error
-              // и задавая начальные значения элементов ранее сохраненными.
-             //print_r($values);
-            ?>
-            <form action="index.php" method="POST">
-              <label>Ваше Имя:</label><br>
-              <input name="fio" <?php print($errors['fio']? 'class="error"' : '');?> value="<?php print $values['fio']; ?>"/><br>
-
-              <label>Еmail:</label>
-              <input name="email" <?php print($errors['email']? 'class="error"':'');?> value="<?php print $values['email']; ?>"/><br>
-
-              <label>Год рождения:</label><br>
-              <select name="year" <?php print($errors['year'] ? 'class="error"' : '');?>>
-                <?php 
-                  for ($i = 1922; $i <= 2022; $i++) {
-                    $selected = ($i == $values['year']) ? 'selected="selected"' : '';
-                    printf('<option value="%d" %s>%d год</option>', $i, $selected, $i);
-                  }
-                ?>
-              </select><br>
-
-              <label>Пол:</label><br>
-              <label><input name="gender" type="radio" value="w" <?php print($errors['gender']? 'class="error"': '');?> 
-                        <?php if ($values['gender']=='w') print 'checked';?>/>Женский</label>
-              <label><input name="gender" type="radio" value="m" <?php print($errors['gender']? 'class="error"': '');?> 
-                        <?php if ($values['gender']=='m') print 'checked';?>/>Мужской</label><br>
-
-              <label>Количество конечностей:</label><br>
-              <label>1<input name="limbs" type="radio" value="1" <?php print($errors['limbs']? 'class="error"': '');?> 
-                      <?php if ($values['limbs']=='1') print 'checked';?>/></label><br>
-              <label>2<input name="limbs" type="radio" value="2" <?php print($errors['limbs']? 'class="error"': '');?> 
-                       <?php if ($values['limbs']=='2') print 'checked';?>/></label><br>
-              <label>3<input name="limbs" type="radio" value="3" <?php print($errors['limbs']? 'class="error"': '');?> 
-                       <?php if ($values['limbs']=='3') print 'checked';?>/></label><br>
-              <label>4<input name="limbs" type="radio" value="4"<?php print($errors['limbs']? 'class="error"': '');?> 
-                       <?php if ($values['limbs']=='4') print 'checked';?>/></label><br>
-
-              <label>Сверхспособности</label><br>
-              <select name="ability[]" multiple="multiple" <?php print($errors['ability']? 'class="error"': '');?>>
-                <option value="1" <?php $values['1'] == 1 ? print 'selected' : '';?>>none</option>
-                <option value="2" <?php $values['2'] == 1 ? print 'selected' : '';;?>>Бессмертие</option>
-                <option value="3" <?php $values['3'] == 1 ? print 'selected' : '';; ?>>Прохождения сквозь стены</option>
-                <option value="4" <?php $values['4'] == 1 ? print 'selected' : '';; ?>>Левитация</option>
-              </select><br>
-
-              <label>Биография:</label><br>
-              <textarea name="biography" type="textarea" <?php print($errors['biography']? 'class="error"': '');?>><?php print $values['biography']; ?></textarea><br>
-
-              <input name='dd' hidden value=<?php print($_GET['edit_id']);?>>
-              <input type="submit" name='save' value="Save"/>
-              <input type="submit" name='del' value="Delete"/>
-            </form>
-            <a href='admin.php' class="button">Назад</a>
-  </div>
-</body>
+<html>
+  <head>
+  <link rel="stylesheet" href="style.css" type="text/css">
+  </head>
+<?php 
+    $stmt = $db->prepare("SELECT AppId, name, email, data, gender, limbs, biog, username FROM main where AppId = :id");
+    $stmt->execute([':id' => $param]);
+    $str = $stmt->fetch();
+      $stmt = $db->prepare("SELECT * FROM ability_add");
+      $stmt->execute();
+      $result = $stmt->fetchAll();
+    ?>
+ <body>
+ <div class="wrapper">
+    <div class="content">
+    <h1><a id="forma"></a>Форма:</h1>
+      <form action="admin_edit.php" method="POST">
+        <label>Логин:<input type="text" name="login"  value="<?php print $param; ?>" readonly/></label><br/>
+        <label>Ваше имя:<input type="text" name="name"placeholder="Введите имя"  value="<?php print $str['name']; ?>" /></label><br/>
+        <label>Почта <input type="email" name="email" placeholder="Введите почту" value="<?php print $str['email']; ?>"/></label><br/>
+        <label>Дата рождения:<input type="date" name="date" value="<?php print $str['data']; ?>"/></label><br/>
+        <p>
+          <label> Пол:
+            <input type="radio" checked="checked" name="gender" value="Female"/>Женский</label>
+          <label><input type="radio" name="gender" value="Male" />Мужской</label><br />
+        </p>
+        <p>
+          Kоличество конечностей:<br/>
+          <label><input type="radio" checked="checked" name="limbs" value="2"/>2</label>
+          <label><input type="radio" name="limbs" value="4"/>4</label>
+          <label><input type="radio" name="limbs" value="6"/>6</label>
+          <label><input type="radio" name="limbs" value="8"/>8</label><br/>
+        </p>
+        <p>
+        <label>
+          Cверхспособности:<br />
+          <select name="abilities[]" multiple="multiple">
+            <?php foreach($result as $res) { ?>
+              <option value="<?php echo $res['AbId']; ?>"><?php echo $res['AbName']; ?></option>
+            <?php } ?>
+          </select>
+        </label><br />
+        </p>
+        <p>
+        <label>Биография:<br/>
+          <textarea name="biog"> <?php print $str['biog']; ?></textarea>
+        </label><br />
+        </p>
+        <a id="bottom"></a><br/>
+        <p><input type="submit" name="send" value="Изменить"/></p>
+      </form>
+   
+    <form action="admin.php" method="POST">
+          <input type="hidden" name="id"  value="<?php print $param; ?>" readonly/>
+          <button type="submit" name ="delete">Удалить</button>
+    </form>
+    </div> </div>
+  </body>
+</html>
