@@ -1,58 +1,118 @@
 <?php
-if($_SERVER['REQUEST_METHOD']=='GET'){
-  $user = 'u51489';
-  $pass = '7565858';
-  $db = new PDO('mysql:host=localhost;dbname=u51489', $user, $pass, array(PDO::ATTR_PERSISTENT => true));
-  
-  $pass_hash=array();
-  try{
-    $get=$db->prepare("select pass from admin where user=?");
-    $get->execute(array('admin'));
-    $pass_hash=$get->fetchAll()[0][0];
-  }
-  catch(PDOException $e){
-    print('Error: '.$e->getMessage());
-  }
-  //аутентификация
-  if (empty($_SERVER['PHP_AUTH_USER']) ||
-      empty($_SERVER['PHP_AUTH_PW']) ||
-      $_SERVER['PHP_AUTH_USER'] != 'admin' ||
-      md5($_SERVER['PHP_AUTH_PW']) != $pass_hash) {
-    header('HTTP/1.1 401 Unanthorized');
-    header('WWW-Authenticate: Basic realm="My site"');
-    print('<h1>401 Требуется авторизация</h1>');
-    exit();
-  }
-  if(!empty($_COOKIE['del'])){
-    echo 'Пользователь '.$_COOKIE['del_user'].' был удалён <br>';
-    setcookie('del','');
-    setcookie('del_user','');
-  }
-  print('Вы успешно авторизовались и видите защищенные паролем данные');
-  $users=array();
-  $pwrs=array();
-  $pwr_def=array('1','2','3','4');
-  $pwrs_count=array();
-  try{
-    $get=$db->prepare("select * from application");
-    $get->execute();
-    $inf=$get->fetchALL();
-    $get2=$db->prepare("select application_id, ability_id from ability_application");
-    $get2->execute();
-    $inf2=$get2->fetchALL();
-    $count=$db->prepare("select count(*) from ability_application where ability_id=?");
-    foreach($pwr_def as $pw){
-      $i=0;
-      $count->execute(array($pw));
-      $pwrs_count[]=$count->fetchAll()[$i][0];
-      $i++;
-    }
-  }
-  catch(PDOException $e){
-    print('Error: '.$e->getMessage());
-    exit();
-  }
-  $users=$inf;
-  $pwrs=$inf2;
-  include('tab.php');
+include_once('Addition.php');
+/**
+ * Задача 6. Реализовать вход администратора с использованием
+ * HTTP-авторизации для просмотра и удаления результатов.
+ **/
+$login = 'admin';
+$pass = '123';
+$hash = password_hash($pass, PASSWORD_DEFAULT);
+$stmt = $db->prepare("SELECT login, pass FROM admin");
+$stmt->execute();
+$verify = $stmt->fetch(PDO::FETCH_ASSOC);
+// Пример HTTP-аутентификации.
+// PHP хранит логин и пароль в суперглобальном массиве $_SERVER.
+// Подробнее см. стр. 26 и 99 в учебном пособии Веб-программирование и веб-сервисы.
+if (empty($_SERVER['PHP_AUTH_USER']) ||
+    empty($_SERVER['PHP_AUTH_PW']) ||
+    $_SERVER['PHP_AUTH_USER'] != $verify['login'] ||
+ (!password_verify($_SERVER['PHP_AUTH_PW'], $verify['pass']))){
+  header('HTTP/1.1 401 Unanthorized');
+  header('WWW-Authenticate: Basic realm="My site"');
+  print('<h1>401 Требуется авторизация</h1>');
+  exit();
 }
+print('Вы успешно авторизовались и видите защищенные паролем данные.');
+// *********
+// Здесь нужно прочитать отправленные ранее пользователями данные и вывести в таблицу.
+// Реализовать просмотр и удаление всех данных.
+// *********
+if(isset( $_POST['delete'] ) )
+{
+  echo 'yes, i am';
+  $stmt = $db->prepare("DELETE FROM main where AppId = :id");
+  $stmt->execute([':id' => $_POST['id']]);
+  $stmt = $db->prepare("DELETE FROM main_ab where AppID = :id");
+  $stmt->execute([':id' => $_POST['id']]);
+}
+$stmt = $db->prepare("SELECT AppId, name, email, data, gender, limbs, biog, username FROM main");
+$stmt->execute();
+$result = $stmt->fetchAll();
+$stmt = $db->prepare("SELECT * FROM main_ab");
+$stmt->execute();
+$res_ab = $stmt->fetchAll();
+$stmt = $db->prepare("SELECT * FROM ability_add");
+$stmt->execute();
+$ability = $stmt->fetchAll();
+$stmt = $db->prepare("SELECT COUNT(AppID) as count, AbId from main_ab group by AbId");
+$stmt->execute();
+$count_ab = $stmt->fetchAll();
+?>
+<html>
+  <head>
+  <link rel="stylesheet" href="tablestyle.css" type="text/css">
+  </head>
+<body>
+<table>
+<caption>Основная информация</caption>
+<th>AppId</th>
+<th>name</th>
+<th>email</th>
+<th>data</th>
+<th>gender</th>
+<th>limbs</th>
+<th>biog</th>
+<th>username</th>
+<th>link</th>
+<?php foreach($result as $res): ?>
+<tr> 
+<td> <?php echo $res['AppId'];?></td>
+<td><?php echo $res['name'];?></td>
+<td><?php echo $res['email'];?></td>
+<td><?php echo $res['data'];?></td>
+<td><?php echo $res['gender'];?></td>
+<td><?php echo $res['limbs'];?></td>
+<td><?php echo $res['biog'];?></td>
+<td><?php echo $res['username'];?></td>
+<td><a href = '/backend6/admin_edit.php?AppId=<?php echo $res["AppId"]?>'>link</a></td>
+</tr>
+<?php endforeach; ?>
+</table>
+
+<table>
+<caption>Способности</caption>
+<th>AppId</th>
+<th>AbId</th>
+<?php foreach($res_ab as $res): ?>
+<tr> 
+<td> <?php echo $res['AppID'];?></td>
+<td><?php echo $res['AbId'];?></td>
+</tr>
+<?php endforeach; ?>
+</table>
+
+<table>
+<caption>Справочник</caption>
+<th>AppId</th>
+<th>AbId</th>
+<?php foreach($ability as $res): ?>
+<tr> 
+<td> <?php echo $res['AbId'];?></td>
+<td><?php echo $res['AbName'];?></td>
+</tr>
+<?php endforeach; ?>
+</table>
+
+<table>
+<caption>Статистика</caption>
+<th>CountAppId</th>
+<th>AbId</th>
+<?php foreach($count_ab as $res): ?>
+<tr> 
+<td> <?php echo $res['count'];?></td>
+<td><?php echo $res['AbId'];?></td>
+</tr>
+<?php endforeach; ?>
+</table>
+</body>
+</html>
